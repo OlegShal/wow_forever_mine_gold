@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+data/
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.*
+*.creds
+.vercel
+.DS_Store
+.claude/launch.json

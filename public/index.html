@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Craft profit calculator</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <h1 data-i18n="title">Craft profit calculator</h1>
+      <span class="sub">WoW Forever · EU</span>
+    </div>
+    <div class="top-right">
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" class="btn btn-small" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" class="btn btn-small" data-lang="ru" aria-pressed="false">RU</button>
+      </div>
+      <div id="status" class="status" aria-live="polite" data-i18n="loading">Loading…</div>
+      <div id="auth" class="auth" hidden>
+        <button id="auth-login" class="btn btn-small" type="button" hidden data-i18n="auth.login">Sign in with Google</button>
+        <span id="auth-user" class="auth-user" hidden>
+          <span id="auth-email" class="auth-email"></span>
+          <button id="auth-logout" class="btn btn-small" type="button" data-i18n="auth.logout">Sign out</button>
+        </span>
+        <span id="auth-msg" class="msg" aria-live="polite"></span>
+      </div>
+    </div>
+  </header>
+
+  <section class="filters" id="filters" data-i18n-aria="filters" aria-label="Filters">
+    <div class="f f-house">
+      <span class="lbl">
+        <span data-i18n="f.house">Auction house</span>
+        <button type="button" class="hint-btn" id="house-hint-btn" aria-expanded="false" aria-controls="house-hint"
+                aria-label="What are these auction houses?" data-i18n-aria="hint.house.aria">?</button>
+      </span>
+      <div class="pair">
+        <select id="f-faction" aria-label="Faction" data-i18n-aria="f.faction"></select>
+        <select id="f-house" aria-label="Auction house" data-i18n-aria="f.house"></select>
+      </div>
+      <div id="house-hint" class="hint-pop" role="note" hidden data-i18n-html="hint.house"></div>
+    </div>
+
+    <fieldset class="f f-prof">
+      <legend class="lbl" data-i18n="f.profs">Professions</legend>
+      <label><input type="checkbox" name="prof" value="alchemy" checked> <span data-i18n="prof.alchemy">Alchemy</span></label>
+      <label><input type="checkbox" name="prof" value="blacksmithing" checked> <span data-i18n="prof.blacksmithing">Blacksmithing</span></label>
+      <label><input type="checkbox" name="prof" value="enchanting" checked> <span data-i18n="prof.enchanting">Enchanting</span></label>
+      <label><input type="checkbox" name="prof" value="engineering" checked> <span data-i18n="prof.engineering">Engineering</span></label>
+      <label><input type="checkbox" name="prof" value="leatherworking" checked> <span data-i18n="prof.leatherworking">Leatherworking</span></label>
+      <label><input type="checkbox" name="prof" value="tailoring" checked> <span data-i18n="prof.tailoring">Tailoring</span></label>
+      <label><input type="checkbox" name="prof" value="mining" checked> <span data-i18n="prof.mining">Mining</span></label>
+      <label><input type="checkbox" name="prof" value="cooking" checked> <span data-i18n="prof.cooking">Cooking</span></label>
+      <label><input type="checkbox" name="prof" value="first_aid" checked> <span data-i18n="prof.first_aid">First Aid</span></label>
+      <label><input type="checkbox" name="prof" value="herbalism" checked> <span data-i18n="prof.herbalism">Herbalism</span></label>
+      <label><input type="checkbox" name="prof" value="skinning" checked> <span data-i18n="prof.skinning">Skinning</span></label>
+      <label><input type="checkbox" name="prof" value="fishing" checked> <span data-i18n="prof.fishing">Fishing</span></label>
+    </fieldset>
+
+    <label class="f f-search">
+      <span class="lbl" data-i18n="f.search">Search</span>
+      <input id="f-q" type="search" placeholder="item name" data-i18n-ph="f.search.ph" autocomplete="off">
+    </label>
+
+    <div class="f f-range">
+      <span class="lbl" data-i18n="f.skill">Skill</span>
+      <div class="pair">
+        <input id="f-skill-min" type="text" inputmode="numeric" placeholder="from" data-i18n-ph="f.from" aria-label="Skill from" data-i18n-aria="f.skill.min">
+        <input id="f-skill-max" type="text" inputmode="numeric" placeholder="to" data-i18n-ph="f.to" aria-label="Skill to" data-i18n-aria="f.skill.max">
+      </div>
+    </div>
+
+    <div class="f f-range">
+      <span class="lbl" data-i18n="f.price">AH price, gold</span>
+      <div class="pair">
+        <input id="f-price-min" type="text" inputmode="decimal" placeholder="from" data-i18n-ph="f.from" aria-label="AH price from, gold" data-i18n-aria="f.price.min">
+        <input id="f-price-max" type="text" inputmode="decimal" placeholder="to" data-i18n-ph="f.to" aria-label="AH price to, gold" data-i18n-aria="f.price.max">
+      </div>
+    </div>
+
+    <div class="f f-profit">
+      <span class="lbl" data-i18n="f.profit">Min. profit, gold</span>
+      <div class="pair">
+        <input id="f-profit-min" type="text" inputmode="decimal" placeholder="any" data-i18n-ph="f.profit.ph" aria-label="Minimum profit, gold" data-i18n-aria="f.profit.aria">
+        <select id="f-variant" aria-label="Which way of crafting" data-i18n-aria="f.variant.aria">
+          <option value="craft" data-i18n="v.craft">craft from raw materials</option>
+          <option value="buy" data-i18n="v.buy">buy all reagents</option>
+          <option value="best" data-i18n="v.best">whichever is better</option>
+        </select>
+      </div>
+    </div>
+
+    <label class="f f-check">
+      <input id="f-onah" type="checkbox"> <span data-i18n="f.onah">only items listed on the AH</span>
+    </label>
+
+    <button id="f-reset" class="f btn" type="button" data-i18n="f.reset">Reset</button>
+  </section>
+
+  <section class="saved" id="saved" data-i18n-aria="saved" aria-label="My filters" hidden>
+    <span class="lbl" data-i18n="saved">My filters</span>
+    <select id="sv-list" aria-label="Saved filters" data-i18n-aria="sv.list">
+      <option value="" data-i18n="sv.pick">— choose —</option>
+    </select>
+    <input id="sv-name" type="text" maxlength="80" placeholder="name" data-i18n-ph="sv.name.ph" aria-label="Filter set name" data-i18n-aria="sv.name.aria" autocomplete="off">
+    <button id="sv-save" class="btn" type="button" data-i18n="sv.save">Save current</button>
+    <button id="sv-delete" class="btn" type="button" disabled data-i18n="sv.delete">Delete</button>
+    <span id="sv-msg" class="msg" aria-live="polite"></span>
+  </section>
+
+  <p class="legend" id="legend" data-i18n-html="legend"></p>
+
+  <div class="summary" id="summary"></div>
+
+  <div class="table-wrap" id="table-wrap">
+    <table id="grid">
+      <thead>
+        <tr>
+          <th data-key="name" scope="col" data-i18n="col.name">Item</th>
+          <th data-key="profession" scope="col" data-i18n="col.prof">Profession</th>
+          <th data-key="skill" scope="col" class="num" data-i18n="col.skill" data-i18n-title="tip.skill">Skill</th>
+          <th data-key="sell_total" scope="col" class="num" data-i18n-html="col.sell" data-i18n-title="tip.sell">AH price</th>
+          <th data-key="cost_craft" scope="col" class="num" data-i18n-html="col.cost_craft" data-i18n-title="tip.craft">Cost</th>
+          <th data-key="profit_craft" scope="col" class="num" data-i18n-html="col.profit_craft" data-i18n-title="tip.craft">Profit</th>
+          <th data-key="cost_buy" scope="col" class="num" data-i18n-html="col.cost_buy" data-i18n-title="tip.buy">Cost</th>
+          <th data-key="profit_buy" scope="col" class="num" data-i18n-html="col.profit_buy" data-i18n-title="tip.buy">Profit</th>
+          <th data-key="recipe_price" scope="col" class="num" data-i18n="col.recipe" data-i18n-title="tip.recipe">Recipe</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <footer class="foot">
+    <span><span data-i18n="foot.recipes">Recipes:</span> <a href="https://foreverdb.net" target="_blank" rel="noopener">Data from ForeverDB.net</a></span>
+    <span data-i18n="foot.prices">Prices: Blizzard API, every 30 min</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

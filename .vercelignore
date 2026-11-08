@@ -1,0 +1,5 @@
+tests/
+data/
+.github/
+.venv/
+uv.lock
