@@ -28,3 +28,27 @@ create policy saved_filters_delete on public.saved_filters
 
 revoke all on public.saved_filters from anon;
 grant select, insert, update, delete on public.saved_filters to authenticated;
+
+-- Текущие фильтры вошедшего пользователя: одна строка на аккаунт, сайт сохраняет её сам при каждом изменении
+-- и восстанавливает при входе с любого устройства. Доступ — только к своей строке (RLS).
+create table if not exists public.user_filters (
+    user_id    uuid primary key default auth.uid() references auth.users(id) on delete cascade,
+    filters    jsonb not null check (pg_column_size(filters) < 16384),
+    updated_at timestamptz not null default now()
+);
+
+alter table public.user_filters enable row level security;
+
+drop policy if exists user_filters_select on public.user_filters;
+drop policy if exists user_filters_insert on public.user_filters;
+drop policy if exists user_filters_update on public.user_filters;
+
+create policy user_filters_select on public.user_filters
+    for select to authenticated using ((select auth.uid()) = user_id);
+create policy user_filters_insert on public.user_filters
+    for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy user_filters_update on public.user_filters
+    for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+
+revoke all on public.user_filters from anon;
+grant select, insert, update on public.user_filters to authenticated;

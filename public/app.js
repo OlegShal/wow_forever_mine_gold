@@ -63,6 +63,8 @@
       'sv.delete': 'Delete',
       'sv.confirm': (n) => `Really delete “${n}”?`,
       'sv.loadFail': (e) => `could not load saved filters: ${e}`,
+      'prefs.loadFail': (e) => `could not load filters from your account: ${e}`,
+      'prefs.saveFail': (e) => `could not save filters to your account: ${e}`,
       'sv.broken': (n) => `“${n}” is damaged, filters unchanged`,
       'sv.empty': (n) => `“${n}” has no usable fields, filters unchanged`,
       'sv.applied': (n) => `applied “${n}”`,
@@ -208,6 +210,8 @@
       'sv.delete': 'Удалить',
       'sv.confirm': (n) => `Точно удалить «${n}»?`,
       'sv.loadFail': (e) => `не удалось загрузить выборки: ${e}`,
+      'prefs.loadFail': (e) => `не удалось загрузить фильтры из аккаунта: ${e}`,
+      'prefs.saveFail': (e) => `не удалось сохранить фильтры в аккаунт: ${e}`,
       'sv.broken': (n) => `выборка «${n}» повреждена, фильтры не изменены`,
       'sv.empty': (n) => `в выборке «${n}» нет подходящих полей, фильтры не изменены`,
       'sv.applied': (n) => `применена выборка «${n}»`,
@@ -330,6 +334,8 @@
   const COLS = 9;
   const SUPABASE_ESM = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
   const SAVED_TABLE = 'saved_filters';
+  const PREFS_TABLE = 'user_filters'; // текущие фильтры аккаунта, одна строка на пользователя
+  const PREFS_SAVE_MS = 800;
   const FILTERS_V = 1;
   const VARIANTS = new Set(['craft', 'buy', 'best']);
 
@@ -376,7 +382,15 @@
     saved: [],
     deleteArmed: null,
     deleteTimer: null,
+    prefsReady: false,     // фильтры аккаунта загружены — можно сохранять (иначе затрём их значениями по умолчанию)
+    prefsTimer: null,
+    prefsLast: null,       // последний сохранённый снимок (JSON), чтобы не писать одно и то же
+    prefsErr: false,       // на экране наша ошибка сохранения — убрать после удачного сохранения
   };
+
+  // Первый успешный /api/status: до него список домов пуст и дом из аккаунта не применить.
+  let resolveFirstStatus;
+  const firstStatus = new Promise((r) => { resolveFirstStatus = r; });
 
   const state = {
     lang: 'en',
@@ -657,6 +671,7 @@
     const prevHouse = state.houseId;
     fillHouses();
     renderStatus();
+    resolveFirstStatus();
     const houseChanged = state.houseId !== prevHouse;
     const versionChanged = prevVersion !== null && st.data_version !== prevVersion && st.data_version !== state.dataVersion;
     if (houseChanged || versionChanged || (!state.rows.length && !state.loading)) {
@@ -743,6 +758,7 @@
     });
     sortView();
     render();
+    schedulePrefsSave();
   }
 
   const SORT_GET = {
@@ -963,6 +979,7 @@
     renderHouseSelects();
     renderStatus();
     loadRows();
+    schedulePrefsSave();
   }
 
   el.faction.addEventListener('change', () => {
@@ -1015,6 +1032,7 @@
     else state.sort = { key, dir: ASC_FIRST.has(key) ? 1 : -1 };
     sortView();
     render();
+    schedulePrefsSave();
   });
 
   el.tbody.addEventListener('click', (e) => {
@@ -1134,7 +1152,14 @@
       el.svName.value = '';
       flash(el.svMsg, '');
       renderSaved();
-      if (uid) loadSaved();
+      clearTimeout(auth.prefsTimer);
+      auth.prefsTimer = null;
+      auth.prefsReady = false;
+      auth.prefsLast = null;
+      if (uid) {
+        loadSaved();
+        loadPrefs();
+      }
     }
   }
 
@@ -1219,6 +1244,75 @@
     } finally {
       el.authLogout.disabled = false;
     }
+  });
+
+  // ---------- текущие фильтры аккаунта ----------
+  // У вошедшего пользователя фильтры, дом и сортировка живут в аккаунте (public.user_filters):
+  // при входе применяются, при каждом изменении сохраняются (с задержкой PREFS_SAVE_MS).
+
+  async function loadPrefs() {
+    if (!auth.sb || !auth.userId) return;
+    const uid = auth.userId;
+    let res;
+    try {
+      res = await auth.sb.from(PREFS_TABLE).select('filters').maybeSingle();
+    } catch (e) {
+      res = { error: e };
+    }
+    if (uid !== auth.userId) return;
+    if (res && res.error) {
+      // prefsReady остаётся false: лучше не сохранять, чем затереть фильтры аккаунта текущими
+      flash(el.authMsg, t('prefs.loadFail', errText(res.error)), 'error');
+      return;
+    }
+    const filters = res && res.data ? res.data.filters : null;
+    await firstStatus;
+    if (uid !== auth.userId) return;
+    if (filters) applySnapshot(filters);
+    auth.prefsLast = filters ? JSON.stringify(snapshot()) : null;
+    auth.prefsReady = true;
+    if (!filters) schedulePrefsSave(); // новый аккаунт: сохранить то, что сейчас на экране
+  }
+
+  function schedulePrefsSave() {
+    if (!auth.sb || !auth.userId || !auth.prefsReady) return;
+    clearTimeout(auth.prefsTimer);
+    auth.prefsTimer = setTimeout(savePrefs, PREFS_SAVE_MS);
+  }
+
+  async function savePrefs() {
+    clearTimeout(auth.prefsTimer);
+    auth.prefsTimer = null;
+    if (!auth.sb || !auth.userId || !auth.prefsReady) return;
+    const uid = auth.userId;
+    const filters = snapshot();
+    const json = JSON.stringify(filters);
+    if (json === auth.prefsLast) return;
+    let res;
+    try {
+      res = await auth.sb.from(PREFS_TABLE).upsert(
+        { filters, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' },
+      );
+    } catch (e) {
+      res = { error: e };
+    }
+    if (uid !== auth.userId) return;
+    if (res && res.error) {
+      flash(el.authMsg, t('prefs.saveFail', errText(res.error)), 'error');
+      auth.prefsErr = true;
+      return;
+    }
+    auth.prefsLast = json;
+    if (auth.prefsErr) {
+      auth.prefsErr = false;
+      flash(el.authMsg, '');
+    }
+  }
+
+  // Уходят со страницы — не ждать задержки.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && auth.prefsTimer) savePrefs();
   });
 
   // ---------- «Мои выборки» ----------
