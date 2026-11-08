@@ -322,6 +322,7 @@
     { key: 'blackwater', re: /черновод|blackwater/i },
   ];
   const LS_HOUSE = 'forever-craft:house';
+  const DEFAULT_HOUSE = 110; // Альянс, совпал по ценам с игровым аукционом (проверено 2026-11-08)
   const LS_LANG = 'forever-craft:lang';
   const STALE_MIN = 75;
   const STATUS_EVERY_MS = 5 * 60 * 1000;
@@ -608,7 +609,8 @@
     const keep = houses.find((h) => h.id === state.houseId);
     const fromLs = houses.find((h) => h.id === saved);
     const firstFaction = [...new Set(houses.map(factionKey))].sort((a, b) => factionOrder(a) - factionOrder(b))[0];
-    const chosen = keep || fromLs || biggestHouse(housesOf(firstFaction)) || houses[0];
+    const preferred = houses.find((h) => h.id === DEFAULT_HOUSE && h.lots);
+    const chosen = keep || fromLs || preferred || biggestHouse(housesOf(firstFaction)) || houses[0];
     state.houseId = chosen.id;
     renderHouseSelects();
   }
