@@ -21,7 +21,7 @@ Blizzard отдаёт дома без названий серверов; цен�
 
 | Часть | Где | Что делает |
 |---|---|---|
-| Сбор данных | GitHub Actions, cron раз в 30 мин (`.github/workflows/collect.yml`) | `python -m app.job`: рецепты из ForeverDB (если вышла новая выгрузка) → цены аукциона Blizzard → расчёт таблиц и деревьев по каждому дому → Postgres |
+| Сбор данных | GitHub Actions, cron каждые 10 мин (`.github/workflows/collect.yml`; Blizzard обновляет аукцион раз в час) | `python -m app.job`: рецепты из ForeverDB (если вышла новая выгрузка) → цены аукциона Blizzard → расчёт таблиц и деревьев по каждому дому → Postgres |
 | База и вход | Supabase | Схема `craft` (данные калькулятора, наружу не выставлена) и `public.saved_filters` (выборки, RLS: каждый видит только свои) |
 | Сайт и API | Vercel | Статика из `public/`, Python-функция `api/index.py` (FastAPI, только чтение готовых результатов) |
 
@@ -46,7 +46,7 @@ Blizzard отдаёт дома без названий серверов; цен�
 3. **Vercel**: импорт репозитория, Framework Preset **Other**, Output Directory `public`. Environment Variables:
    `DATABASE_URL` (тот же pooler), `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (публичный `sb_publishable_…`).
    **Секретный ключ Supabase (`sb_secret_…`) никуда не класть** — он не нужен; API его в браузер не отдаст, даже если перепутать переменные.
-4. Actions → **collect** → Run workflow (первый прогон ~1,5 мин). Дальше — автоматически каждые 30 минут.
+4. Actions → **collect** → Run workflow (первый прогон ~1,5 мин). Дальше — автоматически каждые 10 минут.
    GitHub отключает расписание после 60 дней без коммитов — включить обратно: Actions → collect → Enable workflow.
 
 ## Локальная разработка

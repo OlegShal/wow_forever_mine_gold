@@ -1,6 +1,6 @@
 """Один прогон обновления: схема → рецепты (если вышла новая выгрузка) → цены → расчёт таблиц по домам.
 
-GitHub Actions запускает его по cron раз в 30 минут (.github/workflows/collect.yml):
+GitHub Actions запускает его по cron каждые 10 минут (.github/workflows/collect.yml):
     python -m app.job
 Локально можно крутить в цикле:
     python -m app.job --loop

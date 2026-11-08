@@ -20,7 +20,7 @@ from .config import PROFESSIONS, REGION, supabase_public
 log = logging.getLogger(__name__)
 app = FastAPI(title="WoW Forever craft calculator", docs_url=None, redoc_url=None)
 
-# Данные меняются раз в 30 минут — даём CDN Vercel кэшировать ответы.
+# Данные меняются не чаще раза в 10 минут — даём CDN Vercel кэшировать ответы.
 CACHE = "public, max-age=0, s-maxage=60, stale-while-revalidate=300"
 
 _conn: psycopg.Connection | None = None
